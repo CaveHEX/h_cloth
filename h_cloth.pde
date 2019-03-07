@@ -1,6 +1,7 @@
 Landscape landscape;
 float time = 0;
 boolean pause = false;
+boolean normalCorrection = false;
 
 void setup() {
   size(1000, 1000, P3D);
@@ -32,5 +33,17 @@ void draw() {
 void keyPressed() {
   if ( key == 'p' ) {
     pause = !pause;
+  }
+  
+  if ( key == 's' ) {
+    screenshot();
+  }
+  
+  if ( key == 'c' ) {
+    normalCorrection = true;
+  }
+  
+  if ( key == 'v' ) {
+    normalCorrection = false;
   }
 }

@@ -1,4 +1,4 @@
-final int nbU = 100;
+final int nbU = 100; //<>//
 final int nbV = 100;
 final int tileSize = 20;
 
@@ -50,7 +50,7 @@ class Landscape {
 
   // Updating the geometry of the landscape
   void updateGeometry() {
-    for ( int u = 0; u < nbU; ++u ) { //<>//
+    for ( int u = 0; u < nbU; ++u ) {
       for ( int v = 0; v < nbV; ++v ) {
         int index = u + v * nbU;  // Index of that point in the array, from (https://processing.org/tutorials/pixels/)
         points[index].x = u * tileSize;
@@ -71,10 +71,22 @@ class Landscape {
       s_.noFill();
       s_.noStroke();
       for ( int v = 0; v < nbV; ++v ) {
-        int index = u + v * nbU;  // Index of that point in the array, from (https://processing.org/tutorials/pixels/)
+        int index = fetchIndex(u, v);  // Index of that point in the array, from (https://processing.org/tutorials/pixels/)
 
-        vert(s_, points[index]);
-        vert(s_, points[index+1]);
+        //PVector norm;
+        //norm = PVector.random3D();
+        //norm = new PVector(1.0, 0.0, 0.0);
+
+        //PVector A = points[index+1].copy();
+        //PVector M = points[index].copy();
+        //PVector B = points[constrain(index+(nbU), 0, 9999)].copy();
+        //PVector MA = PVector.sub(M, A);
+        //PVector MB = PVector.sub(M, B);
+        //norm = MA.cross(MB);
+        //s_.normal(norm.x, norm.y, norm.z);
+
+        vert(s_, u, v);
+        vert(s_, u+1, v);
       }
       s_.endShape(CLOSE);
       s.addChild(s_);
@@ -93,11 +105,63 @@ class Landscape {
     }
   }
 
-  void vert(PShape s, PVector v) {
+  void vert(PShape s, int u, int v) {
+    PVector vec = points[fetchIndex(u, v)];
     s.fill(
-      map(v.x, 0, lenU, 0, 127), 
-      map(v.x, 0, lenU, 255, 0), 
-      map(v.z, 0, lenV, 0, 255));
-    s.vertex(v.x, v.y, v.z);
+      map(vec.x, 0, lenU, 0, 127), 
+      map(vec.x, 0, lenU, 255, 0), 
+      map(vec.z, 0, lenV, 0, 255));
+    if ( normalCorrection ) {
+      determineNormal(s, u, v);
+    }
+    s.vertex(vec.x, vec.y, vec.z);
+  }
+
+  void determineNormal(PShape s, int u, int v) {
+    if ( u == 0 || u == nbU-1 || v == 0 || v == nbV-1 ) {
+      return; // Special case for the borders - not dealt with for now
+    }
+
+    int[] neighboursIndexes = {  // Can be expanded to 8 or more neighbours
+      (fetchIndex(u+1, v)), 
+      (fetchIndex(u-1, v+1)), 
+      (fetchIndex(u, v+1)), 
+      (fetchIndex(u+1, v+1)), 
+      (fetchIndex(u+1, v)), 
+      (fetchIndex(u+1, v-1)), 
+      (fetchIndex(u, v-1)), 
+      (fetchIndex(u-1, v-1)), 
+    };
+
+    PVector[] pts = new PVector[neighboursIndexes.length];  // Clowk-wise ordered neighbours
+    PVector[] normals = new PVector[neighboursIndexes.length];
+
+    for ( int i = 0; i < pts.length; ++i ) {   // Find the normals
+      PVector seg = points[fetchIndex(u, v)].copy(); 
+      seg.sub(points[neighboursIndexes[i]]);
+      pts[i] = seg.copy();
+    }
+
+    for ( int i = 0; i < normals.length; ++i ) {
+      PVector A = pts[i];
+      PVector B = pts[(i+1)%normals.length];
+      normals[i] = B.cross(A);
+    }
+
+    // Average all the normals
+    PVector normalFinal = new PVector();
+    for ( int i = 0; i < normals.length; ++i ) {
+      normalFinal.add(normals[i]);
+    }
+    normalFinal.div(normals.length);
+
+    normalFinal.normalize();
+
+    // Apply normal
+    s.normal(normalFinal.x, normalFinal.y, normalFinal.z);
+  }
+
+  int fetchIndex(int u, int v) {
+    return u + v * nbU;
   }
 }
